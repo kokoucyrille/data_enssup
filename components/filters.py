@@ -33,39 +33,43 @@ def render_page_filters(df_etab: pd.DataFrame) -> Dict:
             help="Aucune sélection = toutes les préfectures des régions choisies",
         )
 
-    communes_options = sorted(df_etab[df_etab["region_nom_bdd"].isin(regions_sel)]["commune_nom_bdd"].dropna().unique())
-    with col3:
-        communes_sel = st.multiselect(
-            "Commune", options=communes_options, default=[], key="filt_commune",
-            help="Aucune sélection = toutes les communes",
-        )
-
-    categories_options = sorted(df_etab["etablissement_categorie"].dropna().unique())
-    col4, col5, col6 = st.columns(3)
-    with col4:
-        categories_sel = st.multiselect(
-            "Type d'établissement", options=categories_options,
-            default=[], key="filt_categorie",
-        )
-
-    secteurs_options = sorted(df_etab["secteur_estime"].dropna().unique())
-    with col5:
-        secteurs_sel = st.multiselect(
-            "Domaine de formation (estimé)", options=secteurs_options,
-            default=[], key="filt_secteur",
-            help="Champ estimé par mots-clés : la spécialité n'est pas fournie.",
-        )
-
     annees_valides = df_etab["annee_creation"].dropna()
     if len(annees_valides):
         y_min, y_max = int(annees_valides.min()), int(annees_valides.max())
-        with col6:
+        with col3:
             annee_range = st.slider(
                 "Année de création", min_value=y_min, max_value=y_max,
                 value=(y_min, y_max), key="filt_annee",
             )
     else:
         annee_range = None
+
+    with st.expander("Filtres avancés"):
+        communes_options = sorted(
+            df_etab[df_etab["region_nom_bdd"].isin(regions_sel)]
+            ["commune_nom_bdd"].dropna().unique()
+        )
+        categories_options = sorted(
+            df_etab["etablissement_categorie"].dropna().unique()
+        )
+        secteurs_options = sorted(df_etab["secteur_estime"].dropna().unique())
+        col4, col5, col6 = st.columns(3)
+        with col4:
+            communes_sel = st.multiselect(
+                "Commune", options=communes_options, default=[],
+                key="filt_commune",
+            )
+        with col5:
+            categories_sel = st.multiselect(
+                "Type d'établissement", options=categories_options,
+                default=[], key="filt_categorie",
+            )
+        with col6:
+            secteurs_sel = st.multiselect(
+                "Domaine de formation (estimé)", options=secteurs_options,
+                default=[], key="filt_secteur",
+                help="Champ estimé par mots-clés : la spécialité n'est pas fournie.",
+            )
 
     st.caption(
         "Les filtres s'appliquent aux analyses fondées sur les établissements. "

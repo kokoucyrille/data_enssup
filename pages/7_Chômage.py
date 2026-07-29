@@ -28,6 +28,14 @@ setup_page("Chômage", "📉")
 render_navbar("Chômage des diplômés — Évolution, corrélations & matrice offre/demande", "9, 16 & 17", "📉")
 df_filtered, filters = render_sidebar()
 
+if df_filtered.empty:
+    st.warning(
+        "Aucun établissement ne correspond aux filtres sélectionnés. "
+        "Élargissez le périmètre pour afficher la matrice Offre/Demande."
+    )
+    render_footer()
+    st.stop()
+
 wb = build_wb_indicators()
 
 tab1, tab2, tab3 = st.tabs(["9.1 Évolution nationale", "16. Analyse de corrélation", "17. Matrice Offre vs Demande"])
@@ -37,23 +45,26 @@ tab1, tab2, tab3 = st.tabs(["9.1 Évolution nationale", "16. Analyse de corréla
 # ------------------------------------------------------------------
 with tab1:
     s = wb["chomage"]["chomage_diplomes_pct"].dropna().sort_index()
-    fig = go.Figure(go.Scatter(x=s.index, y=s.values, mode="lines+markers",
-                                line=dict(color=PALETTE[2], width=3), marker=dict(size=10)))
-    fig.update_layout(title="Taux de chômage des diplômés de l'enseignement supérieur — Togo (Banque mondiale)",
-                       xaxis_title="Année", yaxis_title="% de la population active diplômée", height=430, margin=dict(t=60, b=10))
-    st.plotly_chart(fig, use_container_width=True)
-    png_download_button(fig, "evolution_chomage_diplomes", "chomage_evolution")
-    st.caption(f"Années disponibles : {list(s.index)}")
-    story_box(f"Le taux oscille entre {s.min():.1f}% ({s.idxmin()}) et {s.max():.1f}% ({s.idxmax()}), sans "
-              "tendance linéaire nette — la série est trop courte et trop irrégulière pour conclure à une "
-              "amélioration ou une dégradation structurelle.", "warning")
-    chart_insights(
-        f"La série observée s'étend de {s.index.min()} à {s.index.max()}.",
-        "Les variations annuelles doivent être lues avec prudence vu le faible nombre d'observations.",
-        "Le chômage des diplômés est un indicateur national, non attribuable à une région ou une filière.",
-        "Mettre en place un suivi annuel de l'insertion par établissement et par filière.",
-        "Institutionnaliser une enquête de traçabilité des diplômés.",
-    )
+    if s.empty:
+        st.info("Aucune observation de chômage diplômé n'est disponible dans les données chargées.")
+    else:
+        fig = go.Figure(go.Scatter(x=s.index, y=s.values, mode="lines+markers",
+                                    line=dict(color=PALETTE[0], width=3), marker=dict(size=10)))
+        fig.update_layout(title="Taux de chômage des diplômés de l'enseignement supérieur — Togo (Banque mondiale)",
+                           xaxis_title="Année", yaxis_title="% de la population active diplômée", height=430, margin=dict(t=60, b=10))
+        st.plotly_chart(fig, use_container_width=True)
+        png_download_button(fig, "evolution_chomage_diplomes", "chomage_evolution")
+        st.caption(f"Années disponibles : {list(s.index)}")
+        story_box(f"Le taux oscille entre {s.min():.1f}% ({s.idxmin()}) et {s.max():.1f}% ({s.idxmax()}), sans "
+                  "tendance linéaire nette — la série est trop courte et trop irrégulière pour conclure à une "
+                  "amélioration ou une dégradation structurelle.", "warning")
+        chart_insights(
+            f"La série observée s'étend de {s.index.min()} à {s.index.max()}.",
+            "Les variations annuelles doivent être lues avec prudence vu le faible nombre d'observations.",
+            "Le chômage des diplômés est un indicateur national, non attribuable à une région ou une filière.",
+            "Mettre en place un suivi annuel de l'insertion par établissement et par filière.",
+            "Institutionnaliser une enquête de traçabilité des diplômés.",
+        )
 
 # ------------------------------------------------------------------
 # 16. Analyse de corrélation

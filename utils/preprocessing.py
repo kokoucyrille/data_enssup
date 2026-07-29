@@ -113,7 +113,11 @@ def build_budget_wide() -> pd.DataFrame:
     df["Date"] = pd.to_numeric(df["Date"], errors="coerce").astype("Int64")
     wide = df.pivot_table(index="Date", columns="libellés", values="Value", aggfunc="mean").sort_index()
     wide = wide.rename(columns=BUDGET_RENAME)
-    wide["taux_execution_sup"] = wide["budget_sup_execute"] / wide["budget_sup_vote"] * 100
+    vote = wide.get("budget_sup_vote", pd.Series(index=wide.index, dtype=float))
+    execute = wide.get("budget_sup_execute", pd.Series(index=wide.index, dtype=float))
+    wide["taux_execution_sup"] = (
+        execute.div(vote.replace(0, np.nan)).mul(100).replace([np.inf, -np.inf], np.nan)
+    )
     return wide
 
 

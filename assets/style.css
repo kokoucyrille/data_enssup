@@ -10,7 +10,7 @@ html, body, [class*="css"] {
     font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
-.stApp, .main { background: var(--fond-clair); }
+.stApp, .main { background: #F5F8FC; }
 
 section[data-testid="stSidebar"] {
     background: linear-gradient(180deg, #005BAC 0%, #003F76 100%);
@@ -29,6 +29,21 @@ div[data-testid="stMetric"], .card {
     border-radius: 14px;
     padding: 16px;
     box-shadow: 0 6px 18px rgba(16, 66, 117, 0.08);
+}
+
+.republic-mark {
+    display:flex; align-items:center; gap:8px; min-height:72px; color:#005BAC;
+    font-size:29px; line-height:1;
+}
+.republic-mark span { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.3px; }
+
+div[data-testid="stPlotlyChart"] {
+    background:#FFFFFF; border:1px solid #DFEAF5; border-radius:14px;
+    padding:6px; box-shadow:0 6px 18px rgba(16,66,117,.05);
+}
+
+div[data-testid="stExpander"] {
+    border:1px solid #DFEAF5; border-radius:12px; background:#FFFFFF;
 }
 
 div[data-testid="stMetric"] { border-top: 4px solid var(--bleu-institutionnel); }

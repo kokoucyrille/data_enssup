@@ -34,6 +34,14 @@ setup_page("Indice Formation-Emploi", "🧮")
 render_navbar("Indice d'Adéquation Formation-Emploi (IAFE)", "13 & 18-22", "🧮")
 df_filtered, filters = render_sidebar()
 
+if df_filtered.empty:
+    st.warning(
+        "Aucun établissement ne correspond aux filtres sélectionnés. "
+        "Élargissez le périmètre pour calculer l'indice Formation-Emploi."
+    )
+    render_footer()
+    st.stop()
+
 tabs = st.tabs(["13. FEAS", "18. Formule IAFE", "18.2 CRITIC & robustesse", "19. Classement",
                 "20-21. Priorisation", "22. Scénarios"])
 

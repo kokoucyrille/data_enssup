@@ -8,6 +8,7 @@ import streamlit as st
 
 from utils.helpers import setup_page
 from components.sidebar import render_sidebar
+from components.navbar import render_navbar
 from components.cards import objective_grid
 from components.metrics import kpi_row
 from components.footer import render_footer
@@ -15,6 +16,7 @@ from utils.indicators import compute_kpi
 from config import AUTHOR, INSTITUTION, MINISTERE
 
 setup_page("Accueil", "🎓")
+render_navbar("Adéquation Formation-Emploi au Togo", "Pilotage ministériel", "🎓")
 df_filtered, filters = render_sidebar()
 
 # ------------------------------------------------------------------

@@ -18,7 +18,8 @@ def metric_row(metrics: List[Tuple[str, str, str]]):
             st.metric(label, value, help=helptext or None)
 
 
-def kpi_card(label: str, value: str, icon: str = "📌", color: str = "#1B6B45"):
+def kpi_card(label: str, value: str, icon: str = "📌", color: str = "#005BAC",
+             delta: str = "", helptext: str = ""):
     """Carte KPI stylée en HTML/CSS (utilisée pour les mises en avant fortes,
     ex. page d'accueil, Policy Dashboard)."""
     st.markdown(
@@ -27,7 +28,8 @@ def kpi_card(label: str, value: str, icon: str = "📌", color: str = "#1B6B45")
                     border-top:4px solid {color};box-shadow:0 1px 4px rgba(0,0,0,0.08);text-align:center;">
             <div style="font-size:26px;">{icon}</div>
             <div style="font-size:24px;font-weight:700;color:{color};margin-top:4px;">{value}</div>
-            <div style="font-size:12.5px;color:#6c757d;margin-top:2px;">{label}</div>
+            <div style="font-size:12.5px;color:#6c757d;margin-top:2px;" title="{helptext}">{label}</div>
+            <div style="font-size:12px;color:{color};font-weight:650;margin-top:5px;">{delta}</div>
         </div>
         """,
         unsafe_allow_html=True,
