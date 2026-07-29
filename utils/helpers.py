@@ -23,13 +23,12 @@ def setup_page(page_title: str, page_icon: str = "📄"):
 
 
 def story_box(text: str, kind: str = "info") -> None:
-    """Encadré de storytelling affiché systématiquement après un graphique
-    (interprétation, conclusion, implication). `kind` ∈ {info, warning, success}."""
-    icons = {"info": "💡", "warning": "⚠️", "success": "✅"}
-    colors = {"info": "#2E5EAA", "warning": "#F2C744", "success": "#1B6B45"}
+    """Encadré d'interprétation affiché systématiquement sous un graphique
+    (constat, analyse, implication). `kind` ∈ {info, warning, success, danger}."""
+    icons = {"info": "💡", "warning": "⚠️", "success": "✅", "danger": "🚨"}
+    css_class = kind if kind in ("warning", "success", "danger") else ""
     st.markdown(
-        f"""<div style="padding:12px 16px;margin:8px 0 20px 0;border-left:4px solid {colors.get(kind, '#2E5EAA')};
-        background:#f8f9fa;border-radius:4px;font-size:14.5px;line-height:1.55;">
+        f"""<div class="story-box {css_class}">
         {icons.get(kind, 'ℹ️')} {text}</div>""",
         unsafe_allow_html=True,
     )
@@ -55,7 +54,7 @@ def download_buttons(df: pd.DataFrame, base_name: str, key_prefix: str = "") -> 
         st.download_button(
             "⬇️ Télécharger en CSV", data=df.to_csv(index=True).encode("utf-8"),
             file_name=f"{base_name}.csv", mime="text/csv", key=f"{key_prefix}_csv",
-            use_container_width=True,
+            width='stretch',
         )
     with c2:
         buffer = io.BytesIO()
@@ -65,7 +64,7 @@ def download_buttons(df: pd.DataFrame, base_name: str, key_prefix: str = "") -> 
             "⬇️ Télécharger en Excel", data=buffer.getvalue(),
             file_name=f"{base_name}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key=f"{key_prefix}_xlsx", use_container_width=True,
+            key=f"{key_prefix}_xlsx", width='stretch',
         )
 
 

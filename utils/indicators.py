@@ -22,13 +22,9 @@ from utils.preprocessing import (
 
 def minmax_100(s: pd.Series) -> pd.Series:
     """Normalisation min-max sur 0-100. Retourne 50 partout si la série est constante."""
-    numeric = pd.to_numeric(s, errors="coerce")
-    valid = numeric.dropna()
-    if valid.empty:
-        return pd.Series(50.0, index=s.index, dtype=float)
-    if valid.max() == valid.min():
-        return pd.Series(50.0, index=s.index, dtype=float)
-    return ((numeric - valid.min()) / (valid.max() - valid.min()) * 100).fillna(50.0)
+    if s.max() == s.min():
+        return pd.Series(50.0, index=s.index)
+    return (s - s.min()) / (s.max() - s.min()) * 100
 
 
 def fmt_fr(x, decimals=0) -> str:
@@ -43,11 +39,7 @@ def score_national_in_history(series: pd.Series, invert: bool = False, override_
     propre série (0=minimum historique, 100=maximum historique). `override_last` permet
     de tester une valeur hypothétique (scénarios prospectifs, §22). invert=True pour les
     indicateurs où une valeur plus faible est préférable (ex. chômage)."""
-    s = pd.to_numeric(series, errors="coerce").dropna().sort_index()
-    if s.empty:
-        # Valeur neutre : le calcul reste disponible tout en signalant l'absence
-        # de série dans l'interface (année = n/d).
-        return 50.0, np.nan, "n/d"
+    s = series.dropna().sort_index()
     lo, hi = s.min(), s.max()
     val = override_last if override_last is not None else s.iloc[-1]
     pos = 50.0 if hi == lo else (val - lo) / (hi - lo) * 100
@@ -73,19 +65,12 @@ def compute_kpi() -> Dict:
     kpi["Nombre de préfectures couvertes"] = df_etab["prefecture_nom_bdd"].nunique()
     kpi["Nombre d'établissements sup. recensés (2018)"] = int(df_repart[df_repart["type"] == "Etablissement"]["Value"].sum())
     kpi["Nombre d'universités recensées (2018)"] = int(df_repart[df_repart["type"] == "Université"]["Value"].sum())
-    def last_value(frame, column, default=np.nan):
-        values = frame.get(column, pd.Series(dtype=float)).dropna()
-        return values.iloc[-1] if not values.empty else default
-
-    kpi["Taux de féminisation le plus récent (%)"] = round(last_value(ind_wide, "taux_feminisation"), 1)
-    kpi["Ratio étudiants/enseignants le plus récent"] = round(last_value(ind_wide, "ratio_etud_enseignant"), 1)
-    kpi["Dépense annuelle/étudiant la plus récente (FCFA)"] = fmt_fr(last_value(ind_wide, "depense_annuelle_par_etudiant_fcfa"))
-    kpi["Part des filières scientifiques la plus récente (%)"] = round(last_value(ind_wide, "pct_filieres_scientifiques"), 1)
+    kpi["Taux de féminisation le plus récent (%)"] = round(ind_wide["taux_feminisation"].dropna().iloc[-1], 1)
+    kpi["Ratio étudiants/enseignants le plus récent"] = round(ind_wide["ratio_etud_enseignant"].dropna().iloc[-1], 1)
+    kpi["Dépense annuelle/étudiant la plus récente (FCFA)"] = fmt_fr(ind_wide["depense_annuelle_par_etudiant_fcfa"].dropna().iloc[-1])
+    kpi["Part des filières scientifiques la plus récente (%)"] = round(ind_wide["pct_filieres_scientifiques"].dropna().iloc[-1], 1)
     kpi["Taux d'exécution budgétaire sup. moyen (%)"] = round(budget_wide["taux_execution_sup"].mean(), 1)
-    chomage = wb["chomage"].get("chomage_diplomes_pct", pd.Series(dtype=float)).dropna()
-    kpi["Chômage diplômés le plus récent connu (%, année)"] = (
-        f"{chomage.iloc[-1]:.1f}% ({chomage.index[-1]})" if not chomage.empty else "n/d"
-    )
+    kpi["Chômage diplômés le plus récent connu (%, année)"] = f"{wb['chomage']['chomage_diplomes_pct'].iloc[-1]:.1f}% ({wb['chomage'].index[-1]})"
     return kpi
 
 
@@ -208,8 +193,7 @@ def compute_complementary_scores(
 
     values = rf["etab_pour_100k_hab"].values
     mad = np.mean([abs(vi - vj) for vi in values for vj in values]) / 2
-    mean_coverage = np.mean(values)
-    gini_like = mad / mean_coverage if mean_coverage else 0.0
+    gini_like = mad / np.mean(values)
     equity_score_system = round(max(0, 100 - gini_like * 100), 1)
 
     employment_potential = minmax_100(
@@ -617,11 +601,7 @@ def compute_correlation_analysis() -> Dict:
             r, n = corr_mat.iloc[i, j], n_common.iloc[i, j]
             if pd.notna(r) and {cols[i], cols[j]} != circular_pair:
                 pairs.append((cols[i], cols[j], r, int(n)))
-    pairs_df = pd.DataFrame(
-        pairs, columns=["Variable 1", "Variable 2", "r", "n"]
-    )
-    if not pairs_df.empty:
-        pairs_df = pairs_df.sort_values("r", ascending=False)
+    pairs_df = pd.DataFrame(pairs, columns=["Variable 1", "Variable 2", "r", "n"]).sort_values("r", ascending=False)
 
     influence = {}
     for c in cols:

@@ -1,23 +1,28 @@
 """
 pages/1_Accueil.py
 ===================
-Page de garde du tableau de bord : titre, contexte, objectifs, statistiques
-globales et navigation vers les autres pages.
+Page de pilotage (executive dashboard) : bandeau, objectifs, KPI principaux,
+graphiques clés, resume executif, tendances principales et recommandations
+automatiques. Point d'entree unique du tableau de bord (5 sections max).
 """
 import streamlit as st
+import plotly.express as px
 
 from utils.helpers import setup_page
 from components.sidebar import render_sidebar
 from components.navbar import render_navbar
-from components.cards import objective_grid
+from components.cards import objective_grid, recommendation_card
 from components.metrics import kpi_row
 from components.footer import render_footer
-from utils.indicators import compute_kpi
-from config import AUTHOR, INSTITUTION, MINISTERE
+from config import AUTHOR, INSTITUTION, MINISTERE, REGION_COLORS
+from utils.preprocessing import build_indicateurs_sup
+from utils.indicators import (
+    compute_kpi, compute_cover_df, compute_feas, compute_iafe, compute_impact_urgence,
+)
 
-setup_page("Accueil", "🎓")
-render_navbar("Adéquation Formation-Emploi au Togo", "Pilotage ministériel", "🎓")
-df_filtered, filters = render_sidebar()
+setup_page("Accueil", "🏠")
+_, filters = render_sidebar(show_filters=False, current="1_Accueil")
+render_navbar("Adéquation Formation-Emploi au Togo", "Tableau de bord de pilotage", "🏠", show_logos=True)
 
 # ------------------------------------------------------------------
 # Bandeau principal
@@ -25,88 +30,114 @@ df_filtered, filters = render_sidebar()
 st.markdown(
     """
     <div class="hero-banner">
-        <div style="font-size:38px;font-weight:800;">🎓 🇹🇬 Adéquation Formation-Emploi au Togo</div>
-        <div style="font-size:17px;margin-top:6px;opacity:0.95;">
+        <div style="font-size:34px;font-weight:800;">🇹🇬 Adéquation Formation-Emploi au Togo</div>
+        <div style="font-size:16px;margin-top:6px;opacity:0.95;">
             Data Challenge Éducation — Défi 2 — 2026 · Tableau de bord stratégique à destination du Ministère
         </div>
-        <div style="font-size:14px;margin-top:14px;opacity:0.85;">
-            Analyse des formations techniques, de l'enseignement supérieur, des budgets et du chômage des diplômés
+        <div style="font-size:13.5px;margin-top:12px;opacity:0.88;">
+            Formations techniques · Enseignement supérieur · Budgets · Chômage des diplômés · Indice IAFE
         </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
+st.write("")
 
 col_a, col_b = st.columns([2, 1])
 with col_a:
-    st.markdown("### 🎯 Objectif général")
+    st.markdown("### 🎯 Objectif")
     st.markdown(
         "Évaluer, à partir des données ouvertes disponibles, l'**adéquation entre l'offre de formation** "
         "(technique et supérieure) **et les besoins du marché de l'emploi** au Togo, afin de proposer des "
-        "**recommandations stratégiques** concrètes au Ministère en charge de l'Enseignement supérieur et de "
-        "la Formation technique et professionnelle."
-    )
-    st.markdown(
-        "Ce tableau de bord combine cartographie territoriale, analyse statistique, théorie des graphes, "
-        "Machine Learning exploratoire, indicateurs composites inédits (**IAFE**, successeur du FEAS) et un "
-        "**Policy Dashboard** de priorisation des investissements."
+        "**recommandations stratégiques** concrètes au Ministère."
     )
 with col_b:
     st.markdown("### 📍 Portée")
     st.info("**5 régions administratives**\n\nMaritime · Plateaux · Centrale · Kara · Savanes")
     st.caption(f"Auteur : {AUTHOR} — {INSTITUTION}")
-    st.caption(f"À destination du {MINISTERE}")
 
-st.warning(
-    "⚠️ **Avertissement méthodologique** — Une page dédiée (Note méthodologique, dans le menu **Données**) "
-    "documente précisément la granularité réelle de chaque source et les limites qu'elle impose sur la portée "
-    "des analyses. Chaque résultat construit sur une estimation est signalé explicitement par le symbole ⚠️."
-)
-
-st.markdown("### 🧭 Explorer le tableau de bord")
-objective_grid([
-    ("🗺️", "Cartographie territoriale", "Localisation des 256 établissements de formation technique et carte des priorités d'investissement."),
-    ("📊", "Diagnostic statistique", "Effectifs, budgets, chômage des diplômés, indicateurs socio-éducatifs nationaux 2013-2020."),
-    ("🕸️", "Théorie des graphes", "Centralités, PageRank, communautés de Louvain — structure relationnelle du système éducatif."),
-])
-st.write("")
-objective_grid([
-    ("🤖", "Machine Learning", "Modélisation exploratoire du chômage des diplômés et clustering des profils régionaux."),
-    ("🧮", "Indice IAFE", "Indice d'Adéquation Formation-Emploi, pondération justifiée statistiquement (méthode CRITIC)."),
-    ("🎯", "Policy Dashboard", "Priorisation Impact × Urgence, scénarios prospectifs et recommandations chiffrées."),
-])
-
-st.markdown("### 📈 Statistiques globales")
+# ------------------------------------------------------------------
+# KPI principaux
+# ------------------------------------------------------------------
+st.markdown("### 📈 Indicateurs clés")
 kpi = compute_kpi()
+ind_wide = build_indicateurs_sup()
+femin = ind_wide["taux_feminisation"].dropna()
+delta_femin = f"{'▲' if femin.iloc[-1] >= femin.iloc[0] else '▼'} depuis {femin.index[0]}"
+
 kpi_row([
-    ("Formations techniques", str(kpi["Nombre de formations techniques recensées"]), "🏫", "#1B6B45"),
-    ("Régions couvertes", f"{kpi['Nombre de régions couvertes (formation technique)']}/5", "🗺️", "#2E5EAA"),
-    ("Préfectures couvertes", str(kpi["Nombre de préfectures couvertes"]), "📍", "#F2C744"),
-    ("Universités (2018)", str(kpi["Nombre d'universités recensées (2018)"]), "🎓", "#D62839"),
+    ("Formations techniques", str(kpi["Nombre de formations techniques recensées"]), "🏫", "#0B3D66"),
+    ("Régions couvertes", f"{kpi['Nombre de régions couvertes (formation technique)']}/5", "🗺️", "#17A2B8"),
+    ("Préfectures couvertes", str(kpi["Nombre de préfectures couvertes"]), "📍", "#F2994A"),
+    ("Universités (2018)", str(kpi["Nombre d'universités recensées (2018)"]), "🎓", "#D64545"),
 ])
 st.write("")
 kpi_row([
-    ("Féminisation étudiants", f"{kpi['Taux de féminisation le plus récent (%)']}%", "👩‍🎓", "#1B6B45"),
-    ("Ratio étud./enseignant", f"{kpi['Ratio étudiants/enseignants le plus récent']}:1", "👩‍🏫", "#2E5EAA"),
-    ("Filières scientifiques", f"{kpi['Part des filières scientifiques la plus récente (%)']}%", "🔬", "#F2C744"),
-    ("Chômage diplômés", kpi["Chômage diplômés le plus récent connu (%, année)"], "📉", "#D62839"),
+    ("Féminisation étudiants", f"{kpi['Taux de féminisation le plus récent (%)']}%", "👩‍🎓", "#0B3D66", delta_femin),
+    ("Ratio étud./enseignant", f"{kpi['Ratio étudiants/enseignants le plus récent']}:1", "👩‍🏫", "#17A2B8"),
+    ("Filières scientifiques", f"{kpi['Part des filières scientifiques la plus récente (%)']}%", "🔬", "#F2994A"),
+    ("Chômage diplômés", kpi["Chômage diplômés le plus récent connu (%, année)"], "📉", "#D64545"),
 ])
 
-st.markdown("### 🧩 Sommaire du tableau de bord")
-st.markdown(
-    """
-| Page | Contenu |
-|---|---|
-| 📊 Données | Chargement, nettoyage, audit des valeurs manquantes, note méthodologique |
-| 🗺️ Analyse Territoriale | Cartographie, couverture régionale, théorie des graphes |
-| 🏫 Formations | Offre de formation technique, catégories, secteurs estimés, saturation |
-| 🎓 Enseignement Supérieur | Effectifs, féminisation, ML, clustering, public/privé |
-| 💰 Budgets | Budgets votés/exécutés, dépense par étudiant, chaîne Budget→Insertion |
-| 📉 Chômage | Chômage des diplômés, corrélations, matrice Offre/Demande |
-| 🧮 Indice IAFE | Formule, CRITIC, robustesse, classements, priorisation, scénarios |
-| 🎯 Recommandations | Recommandations stratégiques et Policy Dashboard |
-| ℹ️ À Propos | Sources, méthodologie, limites, pistes d'amélioration |
-"""
+# ------------------------------------------------------------------
+# Graphiques clés
+# ------------------------------------------------------------------
+st.markdown("### 📊 Tendances principales")
+c1, c2 = st.columns(2)
+cover_df = compute_cover_df()
+with c1:
+    fig = px.bar(cover_df.sort_values("nb_etablissements", ascending=False), x="region", y="nb_etablissements",
+                 color="region", color_discrete_map=REGION_COLORS, text="nb_etablissements",
+                 title="Formations techniques par région")
+    fig.update_layout(showlegend=False, height=340, margin=dict(t=50, b=10))
+    st.plotly_chart(fig, width='stretch')
+with c2:
+    feas = compute_feas().sort_values("FEAS", ascending=False)
+    fig = px.bar(feas.reset_index(), x="region", y="FEAS", color="FEAS", color_continuous_scale="RdYlGn",
+                 range_color=[0, 100], text=feas["FEAS"].round(1), title="Score FEAS par région (0-100)")
+    fig.update_layout(showlegend=False, height=340, margin=dict(t=50, b=10), coloraxis_showscale=False)
+    st.plotly_chart(fig, width='stretch')
+
+# ------------------------------------------------------------------
+# Résumé exécutif
+# ------------------------------------------------------------------
+st.markdown("### 🧭 Résumé exécutif")
+iafe_data = compute_iafe()
+impact_urgence = compute_impact_urgence()
+nb_p1 = int((impact_urgence["Priorité"] == "Priorité 1").sum())
+region_p1 = (impact_urgence[impact_urgence["Priorité"] == "Priorité 1"]["Impact"].idxmax()
+             if nb_p1 else impact_urgence["Impact"].idxmax())
+synthese = (
+    f"Le Togo affiche un **Indice d'Adéquation Formation-Emploi (IAFE) national de {iafe_data['iafe_national']:.1f}/100**. "
+    f"La région **{region_p1}** concentre le déficit le plus critique ({nb_p1} région(s) en Priorité 1 sur 5). "
+    f"Le chômage des diplômés du supérieur s'établit à {iafe_data['chomage_val']:.1f}% en {iafe_data['chomage_year']}. "
+    "Le pays souffre moins d'un déficit de **volume** de formation que d'un déséquilibre de **composition** de son offre : "
+    "la Maritime, la mieux dotée en établissements, affiche pourtant le score d'insertion proxy le plus faible du pays."
 )
+st.markdown(
+    f'<div style="padding:18px 22px;background:linear-gradient(135deg,#0B3D66,#17A2B8);color:white;'
+    f'border-radius:12px;font-size:15px;line-height:1.6;">{synthese}</div>',
+    unsafe_allow_html=True,
+)
+
+# ------------------------------------------------------------------
+# Recommandations automatiques (aperçu)
+# ------------------------------------------------------------------
+st.markdown("### 💡 Recommandations prioritaires")
+st.caption("Aperçu — l'ensemble des recommandations détaillées se trouve dans **Analyses & Recommandations**.")
+region_faible = cover_df.sort_values("etab_pour_100k_hab").iloc[0]
+recommendation_card(1, f"Rééquilibrer l'offre territoriale : la région **{region_faible['region']}** affiche la "
+                       f"couverture la plus faible ({region_faible['etab_pour_100k_hab']:.1f} établissements/100k hab.).")
+recommendation_card(2, f"Investir en priorité dans les régions classées **Priorité 1** ({nb_p1} région(s) sur 5) "
+                       "selon la matrice Impact × Urgence.")
+recommendation_card(3, "Renforcer les filières scientifiques et technologiques, encore minoritaires dans "
+                       "l'enseignement supérieur, avec un accent sur la féminisation de ces filières.")
+
+st.markdown("### 🧩 Explorer le tableau de bord")
+objective_grid([
+    ("📉", "Marché de l'emploi", "Chômage des diplômés, budgets de l'enseignement supérieur et matrice Offre/Demande par région."),
+    ("🏫", "Formation professionnelle", "Cartographie, offre de formation technique, enseignement supérieur et théorie des graphes."),
+    ("🧮", "Analyses & Recommandations", "Indice IAFE, Machine Learning, clustering régional, priorisation et Policy Dashboard."),
+])
 
 render_footer()

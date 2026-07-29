@@ -197,6 +197,7 @@ def plotly_graph_etab_villes(G3: nx.Graph, pagerank: dict, partition: dict) -> g
     return fig
 
 
+@st.cache_resource(show_spinner=False)
 def build_global_pyvis_html() -> str:
     """Construit le grand graphe multi-niveaux interactif (Région → Préfecture →
     Établissement → Catégorie / Secteur estimé) et retourne le HTML pyvis prêt à
